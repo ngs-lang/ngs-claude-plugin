@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "ngs",
-      "source": ".",
+      "source": "./",
       "description": "Next Generation Shell (NGS) skills for Claude Code",
       "version": "0.1.0",
       "author": { "name": "Ilya Sher" },
