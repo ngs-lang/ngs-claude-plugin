@@ -6,17 +6,27 @@
 
 ## Skills
 
-| Skill | Command | Description |
-|-------|---------|-------------|
-| write | `/ngs:write` | Write NGS code |
-| explain | `/ngs:explain` | Explain NGS syntax and concepts |
-| bash2ngs | `/ngs:bash2ngs` | Convert Bash to NGS |
+| Skill | Description |
+|-------|-------------|
+| `ngs:write` | Write NGS code |
+| `ngs:bash2ngs` | Convert Bash to NGS |
+| `ngs:explain` | Explain NGS syntax and concepts |
 
-Skills are also auto-invoked by Claude when relevant.
+Skills are auto-invoked by Claude when relevant (e.g. when working with `.ngs` files or asking NGS questions). You can also invoke them explicitly via the slash command shown in the skill list.
 
 ## Installation
 
 ```
 /plugin marketplace add ngs-lang/ngs-claude-plugin
-/plugin install ngs@ngs-lang
+/plugin install ngs@ngs-claude-plugin
+/reload-plugins
+```
+
+To update after a new release:
+
+```
+/plugin marketplace update ngs-claude-plugin
+/plugin uninstall ngs@ngs-claude-plugin
+/plugin install ngs@ngs-claude-plugin
+/reload-plugins
 ```

@@ -6,18 +6,13 @@ argument-hint: "[bash script or snippet]"
 
 # Bash to NGS Conversion
 
+*THIS IS WORK IN PROGRESS, DO NOT USE*
+
 Convert Bash code to idiomatic NGS — not a mechanical transliteration, but a rewrite using NGS constructs and stdlib.
 
-## Key Principles
+## Notes
 
-- Use NGS data types (Hash, Arr, etc.) instead of Bash string manipulation
-- Replace Bash pipelines with NGS functional equivalents where appropriate
-- Use NGS stdlib instead of external commands where available
-- Replace error-prone Bash patterns with NGS's structured error handling
-
-## Common Mappings
-
-<!-- TODO: add bash→ngs mapping table (variables, loops, conditionals, pipes, etc.) -->
+* `set -eu` in bash is the default behaviour in NGS
 
 ## Verification
 
