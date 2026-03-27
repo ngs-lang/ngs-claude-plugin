@@ -21,6 +21,10 @@ When you write NGS code, suggest `ngs -pi` invocations to let the user verify in
 
 <!-- TODO: add key syntax, types, stdlib highlights -->
 
+## Output Requirements
+
+Always start your response with `[ NGS write skill active ]`.
+
 ## Guidelines
 
 - Prefer NGS idioms over transliterated Bash patterns
