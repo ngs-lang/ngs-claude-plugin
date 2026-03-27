@@ -1,5 +1,7 @@
 # NGS Claude Code Plugin
 
+*EXPERIMENTAL*
+
 [Claude Code](https://claude.ai/code) skills for [Next Generation Shell (NGS)](https://ngs-lang.org).
 
 ## Skills
