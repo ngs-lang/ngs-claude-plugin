@@ -8,6 +8,8 @@ argument-hint: "[bash script or snippet]"
 
 Convert Bash code to idiomatic NGS — not a mechanical transliteration, but a rewrite using NGS constructs and stdlib.
 
+* Prefer NGS idioms over transliterated Bash patterns
+
 ## Defaults
 
 * `set -eu` in bash is the default behaviour in NGS
