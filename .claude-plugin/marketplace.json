@@ -8,7 +8,7 @@
       "name": "ngs",
       "source": "./",
       "description": "Next Generation Shell (NGS) skills for Claude Code",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": { "name": "Ilya Sher" },
       "homepage": "https://ngs-lang.org",
       "repository": "https://github.com/ngs-lang/ngs-claude-plugin",
