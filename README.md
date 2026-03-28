@@ -14,7 +14,7 @@
 
 Skills are auto-invoked by Claude when relevant (e.g. when working with `.ngs` files or asking NGS questions). You can also invoke them explicitly via the slash command shown in the skill list.
 
-## Installation
+## Install
 
 ```
 /plugin marketplace add ngs-lang/ngs-claude-plugin
@@ -22,10 +22,14 @@ Skills are auto-invoked by Claude when relevant (e.g. when working with `.ngs` f
 /reload-plugins
 ```
 
-To update after a new release:
+## Update
 
 ```
 /plugin marketplace update ngs-claude-plugin
+```
+
+Then, if you see that the plugin version is still not what you expect:
+```
 /plugin uninstall ngs@ngs-claude-plugin
 /plugin install ngs@ngs-claude-plugin
 /reload-plugins
