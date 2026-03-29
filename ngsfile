@@ -1,0 +1,35 @@
+ns {
+
+	PLUGIN_JSON_PATH = '.claude-plugin/plugin.json'
+	MARKETPLACE_JSON_PATH = '.claude-plugin/marketplace.json'
+
+	F versions() {
+		{
+			'plugin': fetch(PLUGIN_JSON_PATH).version
+			'marketplace': fetch(MARKETPLACE_JSON_PATH).plugins.the_one().version
+		}
+	}
+
+	F release(version:Str) {
+		section "update version files" {
+			plugin = fetch(PLUGIN_JSON_PATH)
+			plugin.version = version
+			store(PLUGIN_JSON_PATH, plugin, {"pretty": true})
+			log("Updated ${PLUGIN_JSON_PATH}")
+
+			marketplace = fetch(MARKETPLACE_JSON_PATH)
+			marketplace.plugins.the_one().version = version
+			store(MARKETPLACE_JSON_PATH, marketplace, {"pretty": true})
+			log("Updated ${MARKETPLACE_JSON_PATH}")
+		}
+		section "git commit and tag" {
+			$(log: git add .claude-plugin/plugin.json .claude-plugin/marketplace.json)
+			$(log: git commit -m "Release ${version}")
+			$(log: git tag "v${version}")
+		}
+		section "push" {
+			$(log: git push)
+			$(log: git push origin "v${version}")
+		}
+	}
+}
