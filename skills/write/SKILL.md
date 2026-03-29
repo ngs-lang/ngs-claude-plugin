@@ -98,7 +98,10 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 
 ## Flow Control
 
-* Use `block NAME { }` for non-local exit with `NAME.return()` (returns `null`) and `NAME.return(VALUE)`. Idiomatic block name is `b`, but use a descriptive name (e.g. `cmp`) if `b` would shadow a variable.
+* Use `block NAME { }` for non-local exit with `NAME.return()` (returns `null`) and `NAME.return(VALUE)`.
+  * Idiomatic block name is `b`, but use a descriptive name (e.g. `cmp`) if `b` would shadow a variable.
+  * Use it when deep, ex: `F f() block b { something.each({ ... b.return() ... }) }`.
+  * If not deep, prefer `COND returns VAL` (only works from the function level, including function syntactic sugar like `{...}`).
 * `paginate(F(token) { ... })` is a built-in for pagination loops — initializes token to null, loops until callback returns falsy. Does NOT collect results — wrap in `collector { }` to use `collect`
 * C-style `for(i=0; i<n; i+=step)` works in NGS — prefer over `i=0; while ... i+=step`. Use `for(i;n)` when step is 1. Prefer `each` to `for`.
 

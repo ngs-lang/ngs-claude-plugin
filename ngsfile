@@ -15,17 +15,15 @@ ns {
 			F parts(v:Str) v.split('.').map(Int).assert(Transformed(len, 3), "Version must have exactly 3 parts: ${v}")
 			a_parts = parts(a)
 			b_parts = parts(b)
-			block cmp {
-				for(i;3) {
-					if a_parts[i] > b_parts[i] { cmp.return(true) }
-					if a_parts[i] < b_parts[i] { cmp.return(false) }
-				}
-				false
+			for(i;3) {
+				a_parts[i] > b_parts[i] returns true
+				a_parts[i] < b_parts[i] returns false
 			}
+			false
 		}
-		version.assert(/^[0-9]+\.[0-9]+\.[0-9]+$/, "Version must be X.Y.Z")
-		current = fetch(PLUGIN_JSON_PATH).version
-		_version_gt(version, current).assert(true, "Version ${version} must be higher than current ${current}")
+		versions().each(F(name, current) {
+			_version_gt(version, current).assert(true, "Version ${version} must be higher than ${name} current ${current}")
+		})
 		section "update version files" {
 			plugin = fetch(PLUGIN_JSON_PATH)
 			plugin.version = version
