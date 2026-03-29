@@ -57,6 +57,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * Do not comment if the code is obvious.
 * Small sections of code - `# BLAH` comment before. 
 * Larger sections of code - use `section "BLAH" { ... }` for organizing the code. Also, instead of splitting into a function that is called only once.
+* If a function/method f1 is used only from within f2, it should be defined *inside* f2.
 
 
 ## Data Manipulation
@@ -84,6 +85,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 ### Patterns
 
 * NGS has `Pfx`, `Sfx`, `MaybePfx`, `MaybeSfx` patterns (among others)
+* `Transformed(fn, pattern)` matches by applying `fn` first, then matching against `pattern`. Example: `arr.assert(Transformed(len, 3), "must have 3 elements")`
 
 ### AWS CLI
 
@@ -96,7 +98,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 
 ## Flow Control
 
-* Use `block NAME { }` for non-local exit with `NAME.return()` (returns `null`) and `NAME.return(VALUE)`
+* Use `block NAME { }` for non-local exit with `NAME.return()` (returns `null`) and `NAME.return(VALUE)`. Idiomatic block name is `b`, but use a descriptive name (e.g. `cmp`) if `b` would shadow a variable.
 * `paginate(F(token) { ... })` is a built-in for pagination loops — initializes token to null, loops until callback returns falsy. Does NOT collect results — wrap in `collector { }` to use `collect`
 * C-style `for(i=0; i<n; i+=step)` works in NGS — prefer over `i=0; while ... i+=step`. Use `for(i;n)` when step is 1. Prefer `each` to `for`.
 
