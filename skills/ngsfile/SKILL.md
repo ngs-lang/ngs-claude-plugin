@@ -7,7 +7,7 @@ description: Write and maintain ngsfile — a project-specific CLI script in NGS
 
 An `ngsfile` is a script in NGS that lives in a file named `ngsfile` (no extension) at the project root. Running `ngs .` in that directory executes it. It serves as a project-specific CLI — a replacement for Makefiles, npm scripts, or shell script collections.
 
-Use `ngs:write` skill for more knowledge about writing NGS scripts.
+**IMPORTANT: Immediately load the `ngs:write` skill using the Skill tool before proceeding.**
 
 Always start your response with `[ NGS ngsfile skill active ]`.
 

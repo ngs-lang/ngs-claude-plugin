@@ -45,7 +45,8 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 ## Idiomatic NGS
 
 * Prefer `x.method(y)` over `method(x, y)`
-* Use `DATA.assert(PATTERN, ERROR_MESSAGE)`
+* Use `DATA.assert(ERROR_MESSAGE)` — checks DATA is truthy
+* Use `DATA.assert(PATTERN, ERROR_MESSAGE)` — checks DATA matches pattern
 * Rely heavily on multiple dispatch, if possible use same name for methods (verbs) and keep number of verbs to minimum.
 * Prefer new types with existing verbs over new verbs over untyped (Hash for example) data
 * Constants are uppercase. (but in this skill file, uppercase usually means placeholder)

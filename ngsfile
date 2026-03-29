@@ -22,7 +22,7 @@ ns {
 			false
 		}
 		versions().each(F(name, current) {
-			_version_gt(version, current).assert(true, "Version ${version} must be higher than ${name} current ${current}")
+			_version_gt(version, current).assert("Version ${version} must be higher than ${name} current ${current}")
 		})
 		section "update version files" {
 			plugin = fetch(PLUGIN_JSON_PATH)
