@@ -44,15 +44,20 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 
 ## Idiomatic NGS
 
-* Prefer x.method(y) over method(x, y)
+* Prefer `x.method(y)` over `method(x, y)`
 * Use `DATA.assert(PATTERN, ERROR_MESSAGE)`
 * Rely heavily on multiple dispatch, if possible use same name for methods (verbs) and keep number of verbs to minimum.
 * Prefer new types with existing verbs over new verbs over untyped (Hash for example) data
-* Use `section "BLAH" { ... }` for organizing the code. Also, instead of splitting into a function that is called only once.
+* Constants are uppercase. (but in this skill file, uppercase usually means placeholder)
 
 ## Code Structure
 
+* Variables and functions/methods defined in an enclosing scope are accessible to inner functions as closures — works in `ns { }`, `F`, and other blocks. Use for shared constants instead of duplicating literals.
 * Use `NAME = ns { ... }` to define namespaces. Prefix private/internal functions with `_` (e.g. `_chunks`) to keep them out of public namespace API.
+* Do not comment if the code is obvious.
+* Small sections of code - `# BLAH` comment before. 
+* Larger sections of code - use `section "BLAH" { ... }` for organizing the code. Also, instead of splitting into a function that is called only once.
+
 
 ## Data Manipulation
 
@@ -71,6 +76,10 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * Use `.the_one(PATTERN)` over `.filter(PATTERN)[0]` to express expectation of exactly one element.
 * Prefer `VALUE.when(COND, CB_OR_NEW_VALUE)` over `if COND then CB(VALUE) else VALUE` / `if COND then NEW_VALUE else VALUE`. Example: `["ssh", "IP", "w"].map(X.when("IP", "10.0.0.1"))` gives `["ssh", "10.0.0.1", "w"]`. Any time you'd write `if COND then f(x) else x`, consider `x.when(COND, f)` instead. Works well in method chains.
 * Prefer NGS built-in data manipulation over `jq` or AWS CLI built-in `--query`
+* Prefer `fetch(PATH)` over `read(PATH).decode_json()`
+* Prefer `store(PATH, DATA)` over `write(PATH, DATA.encode_json())`
+  * `store(path, data, encode_hints)` accepts a third `encode_hints` Hash — same as `encode_json()`.
+* `encode_json()` pretty-print API uses a hints Hash (encode_json(data, {"pretty": true})), not keyword arguments
 
 ### Patterns
 
