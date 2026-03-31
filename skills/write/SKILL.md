@@ -32,6 +32,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 ## Syntax
 
 * `{ ... }` in NGS creates a method reference (equivalent to `F(...) ...`), NOT an inline evaluated block — unless it's in a specific syntactic position like after `if` or `while`.
+* Only declare a symbol in global if you are defining it in the current scope.
 
 ## Pitfalls
 
@@ -82,6 +83,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * Prefer `store(PATH, DATA)` over `write(PATH, DATA.encode_json())`
   * `store(path, data, encode_hints)` accepts a third `encode_hints` Hash — same as `encode_json()`.
 * `encode_json()` pretty-print API uses a hints Hash (encode_json(data, {"pretty": true})), not keyword arguments
+* `pos()` returns `null` if substring not found
 
 ### Patterns
 
@@ -105,6 +107,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
   * If not deep, prefer `COND returns VAL` (only works from the function level, including anonymous functions `{...}`). Note that `for`, `while`, `if` do not create a new level.
 * `paginate(F(token) { ... })` is a built-in for pagination loops — initializes token to null, loops until callback returns falsy. Does NOT collect results — wrap in `collector { }` to use `collect`
 * C-style `for(i=0; i<n; i+=step)` works in NGS — prefer over `i=0; while ... i+=step`. Use `for(i;n)` when step is 1. Prefer `each` to `for`.
+* Use `not(COND) returns VALUE` for early-exit guard clauses instead of `if not(COND) { return VALUE }` or `COND or return VALUE`
 
 ## Running External Commands
 
