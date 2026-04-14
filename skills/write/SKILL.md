@@ -112,7 +112,8 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * Use `retry()`. (REVIEW THIS POINT)
   * It does not handle exceptions. To retry only on a specific exception type, catch it in the body and return null (falsy), other exceptions propagate naturally.
   * Use named arguments. Ex: `retry(times=..., sleep=..., body=...)`, etc.
-* There is `cond` syntax: `cond VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `cond`.
+* There is `match` syntax: `match VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `match`.
+* There is `cond` syntax: `cond { COND1 EXPR1 COND2 EXPR2 ...}`. First COND that evaluates to true, EXPR is evaluated and becomes the result of `cond`.
 
 ## Running External Commands
 
