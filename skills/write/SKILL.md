@@ -33,6 +33,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 
 * `{ ... }` in NGS creates a method reference (equivalent to `F(...) ...`), NOT an inline evaluated block — unless it's in a specific syntactic position like after `if` or `while`.
 * Only declare a symbol in global if you are defining it in the current scope.
+* There is no trailing block syntax in NGS.
 
 ## Pitfalls
 
@@ -108,6 +109,10 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * `paginate(F(token) { ... })` is a built-in for pagination loops — initializes token to null, loops until callback returns falsy. Does NOT collect results — wrap in `collector { }` to use `collect`
 * C-style `for(i=0; i<n; i+=step)` works in NGS — prefer over `i=0; while ... i+=step`. Use `for(i;n)` when step is 1. Prefer `each` to `for`.
 * Use `not(COND) returns VALUE` for early-exit guard clauses instead of `if not(COND) { return VALUE }` or `COND or return VALUE`
+* Use `retry()`. (REVIEW THIS POINT)
+  * It does not handle exceptions. To retry only on a specific exception type, catch it in the body and return null (falsy), other exceptions propagate naturally.
+  * Use named arguments. Ex: `retry(times=..., sleep=..., body=...)`, etc.
+* There is `cond` syntax: `cond VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `cond`.
 
 ## Running External Commands
 
