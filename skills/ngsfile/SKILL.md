@@ -11,6 +11,8 @@ An `ngsfile` is a script in NGS that lives in a file named `ngsfile` (no extensi
 
 Always start your response with `[ NGS ngsfile skill active ]`.
 
+As with other NGS files, they can be `require()`d by other NGS files: `require("./ngsfile")::deploy(...)`, etc.
+
 ## Structure
 
 Every ngsfile is wrapped in a top-level `ns { ... }` block. This creates a namespace where each exported function becomes a subcommand:

@@ -5,7 +5,7 @@ description: Write and verify NGS (Next Generation Shell) code. Auto-invoked whe
 
 # NGS Code Writing
 
-Next Generation Shell (NGS) is a shell scripting language designed as a modern alternative to classical shells such as `bash`.
+[Next Generation Shell (NGS)](https://github.com/ngs-lang/ngs) is a shell scripting language designed as a modern alternative to classical shells such as `bash`.
 
 NGS has data structures, proper error handling, multi-methods and multiple dispatch.
 
@@ -17,6 +17,9 @@ Use `ngs -pi EXPR` to **print-inspect** an expression — this is the primary wa
 
 ```bash
 ngs -pi 'some_expression'
+ngs -pl 'some_expression'  # print lines
+ngs -pj 'some_expression'  # print as JSON
+ngs -pt 'some_expression'  # print as table
 ```
 
 When you write NGS code, suggest `ngs -pi` invocations to let the user verify intermediate values.
@@ -27,7 +30,10 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 
 * Suggest `ngs -pi EXPR` to verify expressions when debugging
 * `exit("MESSAGE")` exits with code 1, use for error reporting
+* `die("MESSAGE")` exits with message and backtrace
 * If looking into stdlib as AI agent, note that stdlib is both speed optimized and tries not to use more appropriate facilities if they are defined later.
+* `require("path/to/file.ngs")` loads a module. **Current bug**: path is relative to current working directory, not the file that calls `require()`.
+* `Program("name")` represents an external program; use `assert(Program("zip"))` to verify a program exists.
 
 ## Syntax
 
@@ -38,6 +44,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 ## Pitfalls
 
 * NGS default argument (ex: `path=[]`) is NOT fresh per call — it's the same shared mutable list as in Python's default argument gotcha.
+* Pipes are not passing objects. Currently pipes are only used to run external commands and function like pipes in bash.
 
 ## Output
 
@@ -47,6 +54,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 ## Idiomatic NGS
 
 * Prefer `x.method(y)` over `method(x, y)`
+* Use `.=` for in-place method application: `var .= f(arg)` is equivalent to `var = var.f(arg)` / `var = f(var, arg)`
 * Use `DATA.assert(ERROR_MESSAGE)` — checks DATA is truthy
 * Use `DATA.assert(PATTERN, ERROR_MESSAGE)` — checks DATA matches pattern
 * Rely heavily on multiple dispatch, if possible use same name for methods (verbs) and keep number of verbs to minimum.
@@ -65,6 +73,8 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 
 ## Data Manipulation
 
+* `Hash([['a', 0], ['b', 1]])` / `Hash(arr_of_pairs)` constructs a Hash from an array of key-value pairs
+* Access environment variables with `ENV.varname` or `ENV.get('varname', 'default')`
 * Prefer patterns over predicates: use `items.filter({'status': 'running'})` instead of `items.filter(X.status == 'running')`
 * Deep pattern matching: patterns are recursive, `AnyOf(arr)` matches any element, `.filter(pattern)` works directly (no need for `F(r) r =~ pattern`). Hash patterns can use newline-separated keys (no commas), merge multiple `.filter()` calls into one pattern:
   ```
@@ -78,7 +88,10 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * `Hash.get(key)` defaults to `null` (no second argument needed)
 * `Box` exists in NGS (wraps value in optional container) but prefer `.get()` for simple key lookups
 * Use `.the_one(PATTERN)` over `.filter(PATTERN)[0]` to express expectation of exactly one element.
-* Prefer `VALUE.when(COND, CB_OR_NEW_VALUE)` over `if COND then CB(VALUE) else VALUE` / `if COND then NEW_VALUE else VALUE`. Example: `["ssh", "IP", "w"].map(X.when("IP", "10.0.0.1"))` gives `["ssh", "10.0.0.1", "w"]`. Any time you'd write `if COND then f(x) else x`, consider `x.when(COND, f)` instead. Works well in method chains.
+* Prefer `VALUE.when(PATTERN, CB_OR_NEW_VALUE)` over `if COND then CB(VALUE) else VALUE` / `if COND then NEW_VALUE else VALUE`. (when `COND` does pattern matching between `VALUE` and `PATTERN` in the broad sense, including `VALUE == PATTERN` for scalars)
+  * Example: `["ssh", "IP", "w"].map(X.when("IP", "10.0.0.1"))` gives `["ssh", "10.0.0.1", "w"]`.
+  * Example: `v.when(Not(null), { ... })`
+  * Works well in method chains.
 * Prefer NGS built-in data manipulation over `jq` or AWS CLI built-in `--query`
 * Prefer `fetch(PATH)` over `read(PATH).decode_json()`
 * Prefer `store(PATH, DATA)` over `write(PATH, DATA.encode_json())`
@@ -121,3 +134,27 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 # Use double-backtick syntax to run-and-parse external command
 result = ``MY_COMMAND MY_ARGS``
 ```
+
+# Docs
+
+## Manuals
+- [Language reference (ngslang)](https://ngs-lang.org/doc/latest/man/ngslang.1.html) — syntax, variables, types, methods, exceptions
+- [Tutorial (ngstut)](https://ngs-lang.org/doc/latest/man/ngstut.1.html) — examples-based getting started guide
+- [Style guide (ngsstyle)](https://ngs-lang.org/doc/latest/man/ngsstyle.1.html) — code formatting and conventions
+- [Motivation (ngswhy)](https://ngs-lang.org/doc/latest/man/ngswhy.1.html) — design philosophy
+- [CLI reference (ngs)](https://ngs-lang.org/doc/latest/man/ngs.1.html) — command-line options and usage
+- [AWS CLI (na)](https://ngs-lang.org/doc/latest/man/na.1.html) — NGS AWS command-line tool
+- [Internals (ngsint)](https://ngs-lang.org/doc/latest/man/ngsint.1.html) — architecture, VM, compilation
+
+## Generated Reference
+- [Global namespace](https://ngs-lang.org/doc/latest/generated/index.html) — lists all methods and other namespaces
+
+## Wiki
+- [Home](https://github.com/ngs-lang/ngs/wiki)
+- [Intro handson](https://github.com/ngs-lang/ngs/wiki/Intro-handson) — getting started with practical exercises
+- [Running External Commands](https://github.com/ngs-lang/ngs/wiki/Running-External-Commands) — all syntaxes and modifiers
+- [Pitfalls](https://github.com/ngs-lang/ngs/wiki/Pitfalls) — common mistakes and how to avoid them
+- [Use Cases](https://github.com/ngs-lang/ngs/wiki/Use-Cases)
+- [Examples](https://github.com/ngs-lang/ngs/wiki/Examples)
+- [Code Snippets Comparisons](https://github.com/ngs-lang/ngs/wiki/Code-Snippets-Comparisons)
+
