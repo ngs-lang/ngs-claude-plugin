@@ -40,6 +40,12 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * `{ ... }` in NGS creates a method reference (equivalent to `F(...) ...`), NOT an inline evaluated block — unless it's in a specific syntactic position like after `if` or `while`.
 * Only declare a symbol in global if you are defining it in the current scope.
 * There is no trailing block syntax in NGS.
+* `NS::{EXPR}` is a thunk taking `A` as parameter, NOT "evaluate `EXPR` inside namespace `NS`". To call public namespace members, use `NS::name(...)` directly.
+* `global F NAME(args) BODY` is invalid. Declare and define separately:
+  ```
+  global compute_status
+  F compute_status(p:Process) { ... }
+  ```
 
 ## Pitfalls
 
@@ -61,12 +67,15 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * Rely heavily on multiple dispatch, if possible use same name for methods (verbs) and keep number of verbs to minimum.
 * Prefer new types with existing verbs over new verbs over untyped (Hash for example) data
 * Constants are uppercase. (but in this skill file, uppercase usually means placeholder)
+* In multi-line array (`[...]`) and hash (`{...}`) literals, separate elements with newlines only — no trailing commas.
 
 ## Code Structure
 
 * Variables and functions/methods defined in an enclosing scope are accessible to inner functions as closures — works in `ns { }`, `F`, and other blocks. Use for shared constants instead of duplicating literals.
 * Use `NAME = ns { ... }` to define namespaces. Prefix private/internal functions with `_` (e.g. `_chunks`) to keep them out of public namespace API.
   * NAME::FIELD = VALUE works for setting namespace fields from outside
+  * Underscore-prefixed names (`_Ctx`, `_helper`) are namespace-private and unreachable as `ns::_name` from outside. Values of underscore-named types still flow through normally; only the name lookup is private.
+* `TEST` blocks placed inside `ns { ... }` do NOT have access to the namespace's lexical scope — they execute at top level. Reference public members as `ns_name::PublicName` (autoload triggers on first reference). To exercise underscore-prefixed internals, route through a public entry point.
 * Do not comment if the code is obvious.
 * Small sections of code - `# BLAH` comment before. 
 * Larger sections of code - use `section "BLAH" { ... }` for organizing the code. Also, instead of splitting into a function that is called only once.
