@@ -24,7 +24,7 @@ ngs -pt 'some_expression'  # print as table
 
 When you write NGS code, suggest `ngs -pi` invocations to let the user verify intermediate values.
 
-Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For example, `ngs -pi echo` shows all `echo` implementations and their parameters.
+Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and documentation — do not grep stdlib.ngs. For example, `ngs -pi echo` shows all `echo` implementations and their parameters.
 
 ## General
 
@@ -51,6 +51,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 
 * NGS default argument (ex: `path=[]`) is NOT fresh per call — it's the same shared mutable list as in Python's default argument gotcha.
 * Pipes are not passing objects. Currently pipes are only used to run external commands and function like pipes in bash.
+* Do NOT use `X`, `Y`, `Z` or `A`, `B`, `C` as regular variable names — `X`/`Y`/`Z` are reserved for partial application (e.g. `arr.map(X + 1)`), `A`/`B`/`C` are reserved for block parameters (e.g. `arr.filter({A > 0})`).
 * Integer literals silently strip leading zeros: `0123456` parses as `123456` (no octal interpretation, no error). For IDs that may have a leading zero (AWS account IDs, ZIP codes, phone numbers), use a string literal: `"0123456"`.
 
 ## Output
@@ -61,9 +62,11 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 ## Idiomatic NGS
 
 * Prefer `x.method(y)` over `method(x, y)`
+* Do not space-align `=` across adjacent assignments.
 * Use `.=` for in-place method application: `var .= f(arg)` is equivalent to `var = var.f(arg)` / `var = f(var, arg)`
 * Use `DATA.assert(ERROR_MESSAGE)` — checks DATA is truthy
 * Use `DATA.assert(PATTERN, ERROR_MESSAGE)` — checks DATA matches pattern
+* `assert` returns DATA, so assignments can chain it: `v = expr.assert(PATTERN, ERROR_MESSAGE)`
 * Rely heavily on multiple dispatch, if possible use same name for methods (verbs) and keep number of verbs to minimum.
 * Prefer new types with existing verbs over new verbs over untyped (Hash for example) data
 * Constants are uppercase. (but in this skill file, uppercase usually means placeholder)
@@ -102,6 +105,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters. For
 * Prefer `VALUE.when(PATTERN, CB_OR_NEW_VALUE)` over `if COND then CB(VALUE) else VALUE` / `if COND then NEW_VALUE else VALUE`. (when `COND` does pattern matching between `VALUE` and `PATTERN` in the broad sense, including `VALUE == PATTERN` for scalars)
   * Example: `["ssh", "IP", "w"].map(X.when("IP", "10.0.0.1"))` gives `["ssh", "10.0.0.1", "w"]`.
   * Example: `v.when(Not(null), { ... })`
+  * Example: `v.when({EXPR}, {transform(A)})` — block as predicate; ignores `v`, checks EXPR. Use when condition is not based on the value being transformed.
   * Works well in method chains.
 * Prefer NGS built-in data manipulation over `jq` or AWS CLI built-in `--query`
 * Prefer `fetch(PATH)` over `read(PATH).decode_json()`
