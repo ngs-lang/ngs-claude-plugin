@@ -57,7 +57,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 ## Output
 
 * Use `log()` and `warn()` for timestamped output to stderr.
-* Use `debug(FACILITY, MESSAGE)` or `debug(MESSAGE)` for debug output to stderr, controlled by `DEBUG=FACILITY1,FACILITY2,...` environment variable.
+* Use `debug(FACILITY, MESSAGE)` or `debug(MESSAGE)` for debug output to stderr, controlled by `DEBUG=FACILITY1,FACILITY2,...` environment variable. Use `DEBUG=*` to enable all facilities.
 
 ## Idiomatic NGS
 
@@ -69,6 +69,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * `assert` returns DATA, so assignments can chain it: `v = expr.assert(PATTERN, ERROR_MESSAGE)`
 * Rely heavily on multiple dispatch, if possible use same name for methods (verbs) and keep number of verbs to minimum.
 * Prefer new types with existing verbs over new verbs over untyped (Hash for example) data
+* Types support multiple inheritance: `type Foo([Parent1, Parent2])`. Single parent shorthand: `type Foo(Parent)`.
 * Constants are uppercase. (but in this skill file, uppercase usually means placeholder)
 * In multi-line array (`[...]`) and hash (`{...}`) literals, separate elements with newlines only — no trailing commas.
 
@@ -141,6 +142,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
   * It does not handle exceptions. To retry only on a specific exception type, catch it in the body and return null (falsy), other exceptions propagate naturally.
   * Use named arguments. Ex: `retry(times=..., sleep=..., body=...)`, etc.
 * There is no ternary operator (`? :`). Use `if COND { A } else { B }` instead.
+* `if COND { A }` with no `else` is an expression that yields `null` when `COND` is false.
 * There is `match` syntax: `match VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `match`.
 * There is `cond` syntax: `cond { COND1 EXPR1 COND2 EXPR2 ...}`. First COND that evaluates to true, EXPR is evaluated and becomes the result of `cond`.
 
