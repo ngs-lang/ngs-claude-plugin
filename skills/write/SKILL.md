@@ -73,6 +73,7 @@ Fix these where you see.
 ## Idiomatic NGS
 
 * Prefer `x.method(y)` over `method(x, y)`
+* Prefer `h.KEY` over `h[KEY]` (works with `Hash` and similar types)
 * Do not space-align `=` across adjacent assignments.
 * Use `.=` for in-place method application: `var .= f(arg)` is equivalent to `var = var.f(arg)` / `var = f(var, arg)`
 * Use `DATA.assert(ERROR_MESSAGE)` — checks DATA is truthy
