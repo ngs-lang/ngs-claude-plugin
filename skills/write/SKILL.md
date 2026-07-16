@@ -38,6 +38,11 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 ## Syntax
 
 * `{ ... }` in NGS creates a method reference (equivalent to `F(...) ...`), NOT an inline evaluated block — unless it's in a specific syntactic position like after `if` or `while`.
+* Block positions accept a bare single expression OR `{ ... }`. Braces are only needed to group multiple statements/expressions. Typically last expression of curly braces is the result of the whole curly braces block.
+  * Braces required in:
+    * `ns { ... }`
+    * the `{ ... }` method literal
+    * string/command interpolation `${ ... }`.
 * Only declare a symbol in global if you are defining it in the current scope.
 * There is no trailing block syntax in NGS.
 * `NS::{EXPR}` is a thunk taking `A` as parameter, NOT "evaluate `EXPR` inside namespace `NS`". To call public namespace members, use `NS::name(...)` directly.
@@ -53,6 +58,12 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * Pipes are not passing objects. Currently pipes are only used to run external commands and function like pipes in bash.
 * Do NOT use `X`, `Y`, `Z` or `A`, `B`, `C` as regular variable names — `X`/`Y`/`Z` are reserved for partial application (e.g. `arr.map(X + 1)`), `A`/`B`/`C` are reserved for block parameters (e.g. `arr.filter({A > 0})`).
 * Integer literals silently strip leading zeros: `0123456` parses as `123456` (no octal interpretation, no error). For IDs that may have a leading zero (AWS account IDs, ZIP codes, phone numbers), use a string literal: `"0123456"`.
+
+## Misconceptions
+
+Fix these where you see.
+
+* `try EXPR1 tor EXPR2` -> `EXPR1 tor EXPR2`. `tor` is a binary operator and does not need `try` before `EXPR1`. `try EXPR` by itself is also valid, returns null on exception.
 
 ## Output
 
@@ -72,6 +83,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * Types support multiple inheritance: `type Foo([Parent1, Parent2])`. Single parent shorthand: `type Foo(Parent)`.
 * Constants are uppercase. (but in this skill file, uppercase usually means placeholder)
 * In multi-line array (`[...]`) and hash (`{...}`) literals, separate elements with newlines only — no trailing commas.
+* Do NOT put comments (`# ...`) inside array/hash literals: in a hash literal it's a syntax error, and in an array literal a comment on its own line between two elements segfaults the interpreter (leading, trailing, and same-line-as-element comments happen to work, but avoid all of them).
 
 ## Code Structure
 
@@ -91,6 +103,8 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * `Hash([['a', 0], ['b', 1]])` / `Hash(arr_of_pairs)` constructs a Hash from an array of key-value pairs
 * Access environment variables with `ENV.varname` or `ENV.get('varname', 'default')`
 * Prefer patterns over predicates: use `items.filter({'status': 'running'})` instead of `items.filter(X.status == 'running')`
+  * `.reject(PATTERN)` is `.filter(Not(PATTERN))`
+  * Patterns default to truthiness check. Ex: `.filter()` to filter out empty strings.
 * Deep pattern matching: patterns are recursive, `AnyOf(arr)` matches any element, `.filter(pattern)` works directly (no need for `F(r) r =~ pattern`). Hash patterns can use newline-separated keys (no commas), merge multiple `.filter()` calls into one pattern:
   ```
   records.filter({
@@ -143,7 +157,8 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
   * Use named arguments. Ex: `retry(times=..., sleep=..., body=...)`, etc.
 * There is no ternary operator (`? :`). Use `if COND { A } else { B }` instead.
 * `if COND { A }` with no `else` is an expression that yields `null` when `COND` is false.
-* There is `match` syntax: `match VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `match`.
+* There is `match` syntax: `match VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `match`. `match`/`ematch` use `=~ PAT`.
+* `switch`/`eswitch` use `== VAL`
 * There is `cond` syntax: `cond { COND1 EXPR1 COND2 EXPR2 ...}`. First COND that evaluates to true, EXPR is evaluated and becomes the result of `cond`.
 
 ## Running External Commands
