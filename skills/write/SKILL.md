@@ -73,7 +73,9 @@ Fix these where you see.
 ## Idiomatic NGS
 
 * Prefer `x.method(y)` over `method(x, y)`
-* Prefer `h.KEY` over `h[KEY]` (works with `Hash` and similar types)
+* Prefer `h.KEY` over `h['KEY']` (works with `Hash` and similar types)
+* Prefer `h.get('KEY', default)` over `h['KEY'] tor default`
+* Prefer patterns over conditions such as `if (r is Hash) and ('resourceType' in r) ...` -> `if r =~ {'resourceType': Any} ...` or `if r =~ {'resourceType': Str} ...`
 * Do not space-align `=` across adjacent assignments.
 * Use `.=` for in-place method application: `var .= f(arg)` is equivalent to `var = var.f(arg)` / `var = f(var, arg)`
 * Use `DATA.assert(ERROR_MESSAGE)` — checks DATA is truthy
