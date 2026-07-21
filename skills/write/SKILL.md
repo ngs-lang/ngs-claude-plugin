@@ -26,6 +26,11 @@ When you write NGS code, suggest `ngs -pi` invocations to let the user verify in
 
 Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and documentation — do not grep stdlib.ngs. For example, `ngs -pi echo` shows all `echo` implementations and their parameters.
 
+
+## Notation
+
+* NoT ("name or type") notation: in docs/discussion, `f(x, Hash)` means the second arg is an *instance* of `Hash` (i.e. `f(x, h:Hash)`), NOT the literal type value `Hash`. A capitalized name in an argument position denotes an instance of that type.
+
 ## General
 
 * Suggest `ngs -pi EXPR` to verify expressions when debugging
@@ -46,6 +51,9 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * Only declare a symbol in global if you are defining it in the current scope.
 * There is no trailing block syntax in NGS.
 * `NS::{EXPR}` is a thunk taking `A` as parameter, NOT "evaluate `EXPR` inside namespace `NS`". To call public namespace members, use `NS::name(...)` directly.
+* An `ns { ... }` is implemented as an immediately-called function, so name resolution follows ordinary lexical scoping (same as inside an `F`).
+* A bare symbol resolves to the local definition, and a method defined in another scope is reachable only if declared `global` or referenced as `NS::name(...)`.
+* Method-call sugar: `x.f(...)` is `f(x, ...)`.
 * `global F NAME(args) BODY` is invalid. Declare and define separately:
   ```
   global compute_status
@@ -58,6 +66,8 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * Pipes are not passing objects. Currently pipes are only used to run external commands and function like pipes in bash.
 * Do NOT use `X`, `Y`, `Z` or `A`, `B`, `C` as regular variable names — `X`/`Y`/`Z` are reserved for partial application (e.g. `arr.map(X + 1)`), `A`/`B`/`C` are reserved for block parameters (e.g. `arr.filter({A > 0})`).
 * Integer literals silently strip leading zeros: `0123456` parses as `123456` (no octal interpretation, no error). For IDs that may have a leading zero (AWS account IDs, ZIP codes, phone numbers), use a string literal: `"0123456"`.
+* An unnamed parameter's pattern may only be a bare type (`F f(Int)`) or a literal (`F f('all')`). A matcher/expression pattern requires a named parameter: `F f(x:AnyOf(1,2))`, not `F f(AnyOf(1,2))` (syntax error).
+* **Current bug**: an identifier starting with `super` (e.g. `super_type`, `superx`) is mis-parsed as the `super` keyword plus the rest when referenced as an expression inside a `{ ... }` block or function body (bareword at top level is fine). Avoid naming variables/parameters with a `super` prefix.
 
 ## Misconceptions
 
@@ -81,6 +91,7 @@ Fix these where you see.
 * Use `DATA.assert(ERROR_MESSAGE)` — checks DATA is truthy
 * Use `DATA.assert(PATTERN, ERROR_MESSAGE)` — checks DATA matches pattern
 * `assert` returns DATA, so assignments can chain it: `v = expr.assert(PATTERN, ERROR_MESSAGE)`
+* The one-arg `DATA.assert(ERROR_MESSAGE)` truthiness form calls `Bool(DATA)`, which is undefined for some types (e.g. `Type`) and throws `MethodNotFound`. For those, use the pattern form: `DATA.assert(Not(null), ERROR_MESSAGE)`.
 * Rely heavily on multiple dispatch, if possible use same name for methods (verbs) and keep number of verbs to minimum.
 * Prefer new types with existing verbs over new verbs over untyped (Hash for example) data
 * Types support multiple inheritance: `type Foo([Parent1, Parent2])`. Single parent shorthand: `type Foo(Parent)`.
@@ -104,6 +115,7 @@ Fix these where you see.
 ## Data Manipulation
 
 * `Hash([['a', 0], ['b', 1]])` / `Hash(arr_of_pairs)` constructs a Hash from an array of key-value pairs
+* Remove a key from a Hash with `.rejectk(key)` — there is no `-` operator for Hash-minus-key (`h - 'k'` throws `MethodNotFound`)
 * Access environment variables with `ENV.varname` or `ENV.get('varname', 'default')`
 * Prefer patterns over predicates: use `items.filter({'status': 'running'})` instead of `items.filter(X.status == 'running')`
   * `.reject(PATTERN)` is `.filter(Not(PATTERN))`
