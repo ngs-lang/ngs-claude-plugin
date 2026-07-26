@@ -38,7 +38,9 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * `die("MESSAGE")` exits with message and backtrace
 * If looking into stdlib as AI agent, note that stdlib is both speed optimized and tries not to use more appropriate facilities if they are defined later.
 * `require("path/to/file.ngs")` loads a module. **Current bug**: path is relative to current working directory, not the file that calls `require()`.
+  * Call an export with `::`, not `.`: `require("./f")::fn(args)`. `require("./f").fn(args)` is UFCS — it means `fn(require("./f"), args)`, a different thing. When calling several exports, bind first: `m = require("./f"); m::fn()`.
 * `Program("name")` represents an external program; use `assert(Program("zip"))` to verify a program exists.
+* `ARGV0` is the running script's path, as invoked; combine with `realpath` to locate the script's own directory, e.g. `` `realpath "${ARGV0}/.."`.trim() ``. Under `ngs -e` it is `"ngs"`, not a script path.
 
 ## Syntax
 
@@ -59,6 +61,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
   global compute_status
   F compute_status(p:Process) { ... }
   ```
+* `upvar NAME` is a scope declaration (like `local`/`global`). Reading and assigning an enclosing-scope variable works without it; it is needed for `upvar NAME` followed by `F NAME(...) ...`, which adds the method to the enclosing multimethod instead of shadowing it with a new local one.
 
 ## Pitfalls
 
@@ -68,6 +71,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * Integer literals silently strip leading zeros: `0123456` parses as `123456` (no octal interpretation, no error). For IDs that may have a leading zero (AWS account IDs, ZIP codes, phone numbers), use a string literal: `"0123456"`.
 * An unnamed parameter's pattern may only be a bare type (`F f(Int)`) or a literal (`F f('all')`). A matcher/expression pattern requires a named parameter: `F f(x:AnyOf(1,2))`, not `F f(AnyOf(1,2))` (syntax error).
 * **Current bug**: an identifier starting with `super` (e.g. `super_type`, `superx`) is mis-parsed as the `super` keyword plus the rest when referenced as an expression inside a `{ ... }` block or function body (bareword at top level is fine). Avoid naming variables/parameters with a `super` prefix.
+* **Current bug**: in command context (backtick, `$()`, `$[]`) an argument that *starts* with an interpolation ends there, and the rest becomes a NEW argument — `cmd ${x}post` passes two arguments (`VAL`, `post`), same for `${x}-post` and `${x}${x}`. Any literal before the interpolation avoids it: `cmd pre${x}post` → one argument `preVALpost`. Workaround: wrap in double quotes — `cmd "${x}post"`.
 
 ## Misconceptions
 
@@ -79,9 +83,11 @@ Fix these where you see.
 
 * Use `log()` and `warn()` for timestamped output to stderr.
 * Use `debug(FACILITY, MESSAGE)` or `debug(MESSAGE)` for debug output to stderr, controlled by `DEBUG=FACILITY1,FACILITY2,...` environment variable. Use `DEBUG=*` to enable all facilities.
+* Return an `Arr[Hash]` as the program's result to have it auto-rendered as a table — don't `echo` rows by hand. Only on a TTY and only when all elements have the same keys. Control it via `data.meta()[Table] = {'name': 'Title', 'columns': %[col1 col2 ...]}` (`'allow_extra_columns': true` keeps keys not listed in `columns`; `columns` must not be empty; `config("table_NAME")` overrides `columns`).
 
 ## Idiomatic NGS
 
+* For a single-expression body, prefer `F(...) EXPR` (same line) over `F(...) { EXPR }` — omit the braces.
 * Prefer `x.method(y)` over `method(x, y)`
 * Prefer `h.KEY` over `h['KEY']` (works with `Hash` and similar types)
 * Prefer `h.get('KEY', default)` over `h['KEY'] tor default`
@@ -109,6 +115,7 @@ Fix these where you see.
 * Do not comment if the code is obvious.
 * Small sections of code - `# BLAH` comment before. 
 * Larger sections of code - use `section "BLAH" { ... }` for organizing the code. Also, instead of splitting into a function that is called only once.
+  * `section` is a transparent grouping wrapper — it does not open a scope, so it has no effect on name resolution. A `global NAME` declared inside a `section` covers the whole enclosing `ns` (nested sections included); don't re-declare it per section.
 * If a function/method f1 is used only from within f2, it should be defined *inside* f2.
 
 
@@ -143,6 +150,9 @@ Fix these where you see.
   * `store(path, data, encode_hints)` accepts a third `encode_hints` Hash — same as `encode_json()`.
 * `encode_json()` pretty-print API uses a hints Hash (encode_json(data, {"pretty": true})), not keyword arguments
 * `pos()` returns `null` if substring not found
+* No string case-conversion built-in under the obvious names (`upper`/`upcase`/`to_upper`/`capitalize` all absent) — don't derive a display string by upcasing; pass it explicitly.
+* `len(Str)` counts **bytes**, not codepoints.
+* `Str(Str, width:Num)` pads to a **byte** width.
 
 ### Patterns
 
@@ -166,6 +176,7 @@ Fix these where you see.
   * If not deep, prefer `COND returns VAL` (only works from the function level, including anonymous functions `{...}`). Note that `for`, `while`, `if` do not create a new level.
 * `paginate(F(token) { ... })` is a built-in for pagination loops — initializes token to null, loops until callback returns falsy. Does NOT collect results — wrap in `collector { }` to use `collect`
 * C-style `for(i=0; i<n; i+=step)` works in NGS — prefer over `i=0; while ... i+=step`. Use `for(i;n)` when step is 1. Prefer `each` to `for`.
+* Parallel iteration: `coll.peach(F(x) { ... })` runs the callback over each element concurrently and returns `coll`; use `coll.pmap(F(x) ...)` to get the results. Prefer these over `parallel(*coll.map(F(x) F() { ... }))`. `parallel(*funcs)` takes funcs as a splat (separate args, or spread an array with `*arr`) — passing one bare array fails with `InvalidArgument("parallel() expects functions")`.
 * Use `not(COND) returns VALUE` for early-exit guard clauses instead of `if not(COND) { return VALUE }` or `COND or return VALUE`
 * Use `retry()`. (REVIEW THIS POINT)
   * It does not handle exceptions. To retry only on a specific exception type, catch it in the body and return null (falsy), other exceptions propagate naturally.
@@ -182,6 +193,8 @@ Fix these where you see.
 # Use double-backtick syntax to run-and-parse external command
 result = ``MY_COMMAND MY_ARGS``
 ```
+
+* Single-backtick `` `…` `` capture does NOT strip the trailing newline (e.g. `` `realpath X` `` keeps the `\n`); apply `.trim()`. `.strip()`/`.chomp()`/`.rstrip()` do not exist — `.trim()` does.
 
 # Docs
 
