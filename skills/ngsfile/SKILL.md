@@ -62,10 +62,6 @@ Usage: `ngs . api list`, `ngs . db migrate`
 
 Prefix with `_` to keep functions out of the public CLI surface. Mechanism: not exported from `ns`.
 
-### Grouping with `section`
-
-`section "label" { ... }` groups related definitions for readability but introduces **no scope of its own** — everything inside it lives in the enclosing namespace. A `global NAME` declaration made once anywhere in a namespace covers all of that namespace's sections.
-
 ## Common Patterns
 
 ### Environment variables with defaults
