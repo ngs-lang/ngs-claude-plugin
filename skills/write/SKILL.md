@@ -56,16 +56,19 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 * An `ns { ... }` is implemented as an immediately-called function, so name resolution follows ordinary lexical scoping (same as inside an `F`).
 * A bare symbol resolves to the local definition, and a method defined in another scope is reachable only if declared `global` or referenced as `NS::name(...)`.
 * Method-call sugar: `x.f(...)` is `f(x, ...)`.
+* An `X`/`Y`/`Z` literal makes a closure of the innermost call containing it, so don't nest it in another call: in `each(A.set(X, deep_copy(Y)))` the stored value is `F(X, Y, Z) deep_copy(Y)`. Write `each(F(k, v) A.set(k, deep_copy(v)))`.
 * `global F NAME(args) BODY` is invalid. Declare and define separately:
   ```
   global compute_status
   F compute_status(p:Process) { ... }
   ```
+* A parameter's default expression is evaluated once, at definition time, in the enclosing scope. Since 0.2.18 the value is deep-copied per call, so `F f(path=[])` gets a fresh `[]` (0.2.17 and earlier: shared, like Python's gotcha).
+  * A type `deep_copy()` doesn't cover throws `MethodNotFound`, also inside a container (`F f(a=[Int])`). Opt out with `F instantiate_param_dflt(x:MyType) x` (needs `global instantiate_param_dflt` inside an `F`/`ns`).
+  * Inherit `DeepCopyable` to get default implementation of `deep_copy`, allowing a value the type to be used as default parameter value.
 * `upvar NAME` is a scope declaration (like `local`/`global`). Reading and assigning an enclosing-scope variable works without it; it is needed for `upvar NAME` followed by `F NAME(...) ...`, which adds the method to the enclosing multimethod instead of shadowing it with a new local one.
 
 ## Pitfalls
 
-* NGS default argument (ex: `path=[]`) is NOT fresh per call — it's the same shared mutable list as in Python's default argument gotcha.
 * Pipes are not passing objects. Currently pipes are only used to run external commands and function like pipes in bash.
 * Do NOT use `X`, `Y`, `Z` or `A`, `B`, `C` as regular variable names — `X`/`Y`/`Z` are reserved for partial application (e.g. `arr.map(X + 1)`), `A`/`B`/`C` are reserved for block parameters (e.g. `arr.filter({A > 0})`).
 * Integer literals silently strip leading zeros: `0123456` parses as `123456` (no octal interpretation, no error). For IDs that may have a leading zero (AWS account IDs, ZIP codes, phone numbers), use a string literal: `"0123456"`.
@@ -136,6 +139,7 @@ Fix these where you see.
       }]
   })
   ```
+* `copy(x)` is shallow; `deep_copy(x)` (0.2.18+) recurses, preserving the exact subtype. Covers scalars, `Str`, `Arr`/`Hash`/`ArrLike`/`HashLike`/`Set`, `DeepCopyable`; throws `MethodNotFound` otherwise; no cycle support.
 * `Hash.get(key)` defaults to `null` (no second argument needed)
 * `Box` exists in NGS (wraps value in optional container) but prefer `.get()` for simple key lookups
 * Use `.the_one(PATTERN)` over `.filter(PATTERN)[0]` to express expectation of exactly one element.
