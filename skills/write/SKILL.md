@@ -26,6 +26,8 @@ When you write NGS code, suggest `ngs -pi` invocations to let the user verify in
 
 Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and documentation — do not grep stdlib.ngs. For example, `ngs -pi echo` shows all `echo` implementations and their parameters.
 
+There is no signature introspection on a MultiMethod. Use `ngs -pi NAME`, which prints every `.Arr()[i]` with its parameter list. `-pi` uses `inspect()` internally.
+
 
 ## Notation
 
@@ -34,8 +36,8 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 ## General
 
 * Suggest `ngs -pi EXPR` to verify expressions when debugging
-* `exit("MESSAGE")` exits with code 1, use for error reporting
-* `die("MESSAGE")` exits with message and backtrace
+* `exit("MESSAGE", status=1)` exits with givens status, use for error reporting
+* `die("MESSAGE", status=1)` exits with message and backtrace
 * If looking into stdlib as AI agent, note that stdlib is both speed optimized and tries not to use more appropriate facilities if they are defined later.
 * `require("path/to/file.ngs")` loads a module. **Current bug**: path is relative to current working directory, not the file that calls `require()`.
   * Call an export with `::`, not `.`: `require("./f")::fn(args)`. `require("./f").fn(args)` is UFCS — it means `fn(require("./f"), args)`, a different thing. When calling several exports, bind first: `m = require("./f"); m::fn()`.
@@ -71,6 +73,7 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 
 * Pipes are not passing objects. Currently pipes are only used to run external commands and function like pipes in bash.
 * Do NOT use `X`, `Y`, `Z` or `A`, `B`, `C` as regular variable names — `X`/`Y`/`Z` are reserved for partial application (e.g. `arr.map(X + 1)`), `A`/`B`/`C` are reserved for block parameters (e.g. `arr.filter({A > 0})`).
+* Do NOT use a stdlib global's name (`args`, `echo`, ...) as a top-level variable — assignment replaces the multimethod for stdlib itself. Symptom later: `DontKnowHowToCall` exception. Check `ngs -pi NAME` whether a global name is taken. Not applicable inside functions or namespaces.
 * Integer literals silently strip leading zeros: `0123456` parses as `123456` (no octal interpretation, no error). For IDs that may have a leading zero (AWS account IDs, ZIP codes, phone numbers), use a string literal: `"0123456"`.
 * An unnamed parameter's pattern may only be a bare type (`F f(Int)`) or a literal (`F f('all')`). A matcher/expression pattern requires a named parameter: `F f(x:AnyOf(1,2))`, not `F f(AnyOf(1,2))` (syntax error).
 * **Current bug**: an identifier starting with `super` (e.g. `super_type`, `superx`) is mis-parsed as the `super` keyword plus the rest when referenced as an expression inside a `{ ... }` block or function body (bareword at top level is fine). Avoid naming variables/parameters with a `super` prefix.
@@ -141,8 +144,32 @@ Fix these where you see.
   ```
 * `copy(x)` is shallow; `deep_copy(x)` (0.2.18+) recurses, preserving the exact subtype. Covers scalars, `Str`, `Arr`/`Hash`/`ArrLike`/`HashLike`/`Set`, `DeepCopyable`; throws `MethodNotFound` otherwise; no cycle support.
 * `Hash.get(key)` defaults to `null` (no second argument needed)
-* `Box` exists in NGS (wraps value in optional container) but prefer `.get()` for simple key lookups
+* Stdlib passes a maybe-unneeded argument through `Value(v, *args)`, which calls `v` when it's a `Fun` — so give such an argument as a function/block to make it lazy. Ex: `h.dflt(k, {Subject(A)})` constructs only when `k` is missing, and is called with the key as the argument; `h.dflt(k, Subject())` constructs at the call site as usual.
+  * Methods that do this, and how they call the lazy argument:
+    * `get(Hash/HashLike/Arr/ArrLike/MatchSuccess, key_or_idx, dflt)` — `dflt(key_or_idx)`
+    * `dflt(Hash/HashLike/NormalTypeInstance/Eachable1, k, v)` — `v(k)`
+    * `shift(Hash, k, dflt)` — `dflt(k)`
+    * `when(val, pat, new_val)` — `new_val(val)`
+    * `ensure(x, pat, how)` — `how(x)`
+    * `dflt(Failure, x)` — `x(Failure)`
+    * `first`/`last`/`index`/`indexes` — `dflt()`
+    * `the_one(Eachable1, pattern, body, found_more, found_none)` — `found_more()`, `found_none()`
+    * `get(Failure/EmptyBox, dflt)` — `dflt()`
+    * `dflt(EmptyBox, x)` — `x()`
+    * `debug(facility, str_or_producer)` — `str_or_producer()`
+  * Consequence: a `Fun` can not be passed as such a default — it is called instead of returned.
+* `Box` wraps an optional value: `FullBox` (has one) or `EmptyBox` (none). It behaves as an `Eachable1` of 1 or 0 elements, so `each`/`map`/`filter`/`len`/`Bool`/`Arr` work on it.
+  * `h.Box(key)` / `arr.Box(idx)` — `FullBox` if the key/index exists, `EmptyBox` otherwise. Present-but-`null` gives `FullBox(null)`.
+  * `Box(x)` is always `FullBox`; `Box()` and `Box(null)` are `EmptyBox`.
+  * `Box(Success)` is a `FullBox` of the wrapped value, `Box(Failure)` is an `EmptyBox`. These are the `Result` types — a regex `MatchFailure` is `Any`, so `Box("a" ~ /^(..)/)` is a `FullBox`.
+  * `.get(dflt)` unwraps with a fallback; `.get()` on `EmptyBox` throws `BoxFail`.
+  * Prefer `.get(key)` for a plain lookup; reach for `Box` when traversing deeper or guarding shapes.
 * Use `.the_one(PATTERN)` over `.filter(PATTERN)[0]` to express expectation of exactly one element.
+* Use `.first(PATTERN)` over `.filter(PATTERN)[0]` for the first matching element; it stops at the match instead of scanning everything. `Eachable1` only — not `Hash`.
+  * `PATTERN` defaults to truthiness: `[false, 0, null, "xyz"].first()` is `"xyz"`.
+  * `.first(PATTERN, dflt)` returns `dflt` when nothing matches; without `dflt` it throws `ElementNotFound`.
+  * A `dflt` that later code drills into (`.first({'code': Str}, {'code': null}).code`) is a sentinel — prefer `.filter(PATTERN).Box(0).map(...).get(null)`.
+  * `.last(PATTERN)` / `.last(PATTERN, dflt)` mirrors `.first` from the end, but always scans the whole `Eachable1` — no short-circuit.
 * Prefer `VALUE.when(PATTERN, CB_OR_NEW_VALUE)` over `if COND then CB(VALUE) else VALUE` / `if COND then NEW_VALUE else VALUE`. (when `COND` does pattern matching between `VALUE` and `PATTERN` in the broad sense, including `VALUE == PATTERN` for scalars)
   * Example: `["ssh", "IP", "w"].map(X.when("IP", "10.0.0.1"))` gives `["ssh", "10.0.0.1", "w"]`.
   * Example: `v.when(Not(null), { ... })`
