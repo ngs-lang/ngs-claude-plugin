@@ -119,7 +119,7 @@ Fix these where you see.
 
 ## Code Structure
 
-* Wrap a script's top-level code in `ns { ... }`, or put everything in `F main(...) { ... }`. Both keep assignments out of the global scope, where a name collision replaces a stdlib multimethod process-wide. A `main` defined inside an `ns` is still auto-invoked.
+* Wrap a script's top-level code in `ns { ... }`, or put everything in `F main(...) { ... }`. Both keep assignments out of the global scope, where a name collision replaces a stdlib multimethod process-wide.
 * Variables and functions/methods defined in an enclosing scope are accessible to inner functions as closures — works in `ns { }`, `F`, and other blocks. Use for shared constants instead of duplicating literals.
 * Use `NAME = ns { ... }` to define namespaces. Prefix private/internal functions with `_` (e.g. `_chunks`) to keep them out of public namespace API.
   * NAME::FIELD = VALUE works for setting namespace fields from outside
@@ -224,6 +224,19 @@ Fix these where you see.
 * There is `match` syntax: `match VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `match`. `match`/`ematch` use `=~ PAT`.
 * `switch`/`eswitch` use `== VAL`
 * There is `cond` syntax: `cond { COND1 EXPR1 COND2 EXPR2 ...}`. First COND that evaluates to true, EXPR is evaluated and becomes the result of `cond`.
+
+## Invocation
+
+* `main` is the entry point and is invoked automatically — never call `main()` yourself, it then runs twice.
+  * `ARGV` is matched against `main`'s parameters, so declare them instead of reading `ARGV`: `F main(port:Int, host:Str='localhost')`. Typed parameters are parsed. When `main` is a `MultiMethod`, the method matching the arguments is picked; no match exits with `InvalidCommandLineArguments`.
+  * `main`'s return value is not printed; it goes through `ExitCode()` — `Int` is the exit code, `true`/`false` give 0/1, anything else 0.
+* When the script's last expression is a `Namespace`, its `main` is invoked and remaining arguments dispatch to subcommands (as in [ngsfile](../ngsfile/SKILL.md)). Any statement after the `ns { ... }` block makes the result a non-namespace, and `main` silently never runs.
+  * The first argument selects a public member: a `Fun` is called with the rest of the arguments, a nested `Namespace` recurses, so `ngs script.ngs NS CMD ARGS...` works at any depth. Underscore-prefixed members are not reachable.
+  * A nested namespace used as the last argument runs its own `main`; without a `main` it exits with `Subcommand not specified` and lists the available subcommands. Only at top level are no-`main`-no-arguments not an error.
+  * A subcommand's return value is printed and does not affect the exit code.
+  * The bootstrap checks the result first, so with both a global `main` and a `main` in the result namespace only the latter is the entry point. The global one is not shadowed — it still exists and is callable.
+* A `main` defined in a `require`d file is not invoked and warns `'main' method was defined in non-main file`.
+* `main` bound to a non-callable (`main = 42`) throws `MainFail`: `'main' must be a Namespace, MultiMethod or a Fun, not ...`.
 
 ## Running External Commands
 

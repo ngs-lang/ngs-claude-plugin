@@ -168,6 +168,8 @@ ns {
 
 ## Running ngsfile commands
 
+`.` expands to `./ngsfile`, which then runs as any other script — see the [write skill's `## Invocation`](../write/SKILL.md) for the dispatch rules.
+
 * `ngs .` — runs `main()` if defined (typically shows help)
 * `ngs . COMMAND` — runs the named function
 * `ngs . NAMESPACE COMMAND` — runs a function inside a nested namespace
