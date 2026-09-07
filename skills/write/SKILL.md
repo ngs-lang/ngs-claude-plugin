@@ -216,14 +216,21 @@ Fix these where you see.
 * C-style `for(i=0; i<n; i+=step)` works in NGS — prefer over `i=0; while ... i+=step`. Use `for(i;n)` when step is 1. Prefer `each` to `for`.
 * Parallel iteration: `coll.peach(F(x) { ... })` runs the callback over each element concurrently and returns `coll`; use `coll.pmap(F(x) ...)` to get the results. Prefer these over `parallel(*coll.map(F(x) F() { ... }))`. `parallel(*funcs)` takes funcs as a splat (separate args, or spread an array with `*arr`) — passing one bare array fails with `InvalidArgument("parallel() expects functions")`.
 * Use `not(COND) returns VALUE` for early-exit guard clauses instead of `if not(COND) { return VALUE }` or `COND or return VALUE`
-* Use `retry()`. (REVIEW THIS POINT)
-  * It does not handle exceptions. To retry only on a specific exception type, catch it in the body and return null (falsy), other exceptions propagate naturally.
-  * Use named arguments. Ex: `retry(times=..., sleep=..., body=...)`, etc.
 * There is no ternary operator (`? :`). Use `if COND { A } else { B }` instead.
 * `if COND { A }` with no `else` is an expression that yields `null` when `COND` is false.
 * There is `match` syntax: `match VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `match`. `match`/`ematch` use `=~ PAT`.
 * `switch`/`eswitch` use `== VAL`
 * There is `cond` syntax: `cond { COND1 EXPR1 COND2 EXPR2 ...}`. First COND that evaluates to true, EXPR is evaluated and becomes the result of `cond`.
+
+### Retry
+
+* Never hand-write a loop that repeats an operation until it succeeds — use `retry()`, both for flaky external operations and for polling until a state becomes true.
+* An attempt succeeds when the body returns truthy and fails when it returns falsy. Beware a body whose natural result is falsy (`0`, `''`, `[]`) — it is misread as a failure.
+* Use named arguments. Ex: `retry(times=..., sleep=..., body=...)`, etc.
+* Defaults are `times=60` and `sleep=1`, so a bare `retry(body={ ... })` makes up to 60 attempts one second apart and then throws `RetryFail`. Pass `times=`/`sleep=` explicitly when the intent differs, and `fail_cb=` to return a value instead of throwing.
+* `sleep=` takes a `Num` or an `Iter`. Ex: `sleep=ExpBackIter()` for exponential backoff.
+* It does not handle exceptions. To retry only on a specific exception type, catch it in the body and return null (falsy), other exceptions propagate naturally.
+* `retry_assert(val, pattern)` throws `RetryAssertFail`, which `retry()` swallows on all but the last attempt — use it to short-circuit the body once an intermediate value is already wrong. It does not replace the truthiness check: a body that returns normally is still judged by its return value. On the last attempt the `RetryAssertFail` propagates out of `retry()`, so `fail_cb`/`RetryFail` never run.
 
 ## Invocation
 
