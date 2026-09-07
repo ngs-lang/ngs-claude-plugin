@@ -168,7 +168,7 @@ Fix these where you see.
 * `Box` wraps an optional value: `FullBox` (has one) or `EmptyBox` (none). It behaves as an `Eachable1` of 1 or 0 elements, so `each`/`map`/`filter`/`len`/`Bool`/`Arr` work on it.
   * `h.Box(key)` / `arr.Box(idx)` — `FullBox` if the key/index exists, `EmptyBox` otherwise. Present-but-`null` gives `FullBox(null)`.
   * `Box(x)` is always `FullBox`; `Box()` and `Box(null)` are `EmptyBox`.
-  * `Box(Success)` is a `FullBox` of the wrapped value, `Box(Failure)` is an `EmptyBox`. These are the `Result` types — a regex `MatchFailure` is `Any`, so `Box("a" ~ /^(..)/)` is a `FullBox`.
+  * `Box(Success)` is a `FullBox` of the wrapped value, `Box(Failure)` is an `EmptyBox`. These are the `Result` types — a regex `MatchFailure` is `Any`, so `Box("a" =~ /^(..)/)` is a `FullBox`.
   * `.get(dflt)` unwraps with a fallback; `.get()` on `EmptyBox` throws `BoxFail`.
   * Prefer `.get(key)` for a plain lookup; reach for `Box` when traversing deeper or guarding shapes.
 * Use `.the_one(PATTERN)` over `.filter(PATTERN)[0]` to express expectation of exactly one element.
@@ -187,15 +187,38 @@ Fix these where you see.
 * Prefer `store(PATH, DATA)` over `write(PATH, DATA.encode_json())`
   * `store(path, data, encode_hints)` accepts a third `encode_hints` Hash — same as `encode_json()`.
 * `encode_json()` pretty-print API uses a hints Hash (encode_json(data, {"pretty": true})), not keyword arguments
-* `pos()` returns `null` if substring not found
-* No string case-conversion built-in under the obvious names (`upper`/`upcase`/`to_upper`/`capitalize` all absent) — don't derive a display string by upcasing; pass it explicitly.
-* `len(Str)` counts **bytes**, not codepoints.
-* `Str(Str, width:Num)` pads to a **byte** width.
 
 ### Patterns
 
 * NGS has `Pfx`, `Sfx`, `MaybePfx`, `MaybeSfx` patterns (among others)
 * `Transformed(fn, pattern)` matches by applying `fn` first, then matching against `pattern`. Example: `arr.assert(Transformed(len, 3), "must have 3 elements")`
+
+### String Manipulation
+
+* What exists: `split`, `join`, `replace`, `pos`, `starts_with`/`ends_with`, `trim`, `lines`, `words`, `limit`, `before_first`/`after_first`/`before_last`/`after_last`, `ord`/`chr`, `encode_base64`/`decode_base64`, `encode_hex`/`decode_hex`, `encode_uri_component`/`decode_uri_component`, `encode_html`/`encode_html_attr`. Absent: `reverse(Str)`, `index(Str, ...)` (use `pos`), `sprintf`/`%`-formatting, and trimming anything but whitespace — `trim` takes no character argument.
+* No string case-conversion built-in under the obvious names (`upper`/`upcase`/`to_upper`/`capitalize` all absent) — don't derive a display string by upcasing; pass it explicitly.
+* `pos()` returns `null` if substring not found
+* `len(Str)` counts **bytes**, not codepoints.
+* `Str` is an `Eachable1` of its bytes, so `Arr(s)` gives the characters and `map`/`each`/`count(s, PATTERN)` work on them. `"abc".split("")` gives `[["a", "b", "c"]]` — it dispatches to `split(Eachable1, delim)`; use `Arr("abc")`.
+* `s[i]` indexes, `s[a..b]` slices half-open, `s[i..null]` runs to the end. `s[-1]` works as a single index, but a negative or out-of-range bound inside a range throws `IndexNotFound` — nothing is clamped.
+* `Str(x, target_width:Int, ch:Str=" ")` pads to a **byte** width — a `Str` pads on the right, an `Int` on the left, and a negative `target_width` reverses that. `limit(s, n, marker)` truncates instead.
+* `before_first`/`after_first`/`before_last`/`after_last` throw `InvalidArgument` when the delimiter is absent — guard with `in`.
+* `split(Str, Str)` and `split(Str, RegExp)` disagree about empty parts — the regexp form drops leading, trailing and between-adjacent-delimiter parts alike, so positional parsing needs the `Str` overload:
+  ```
+  ":a::b:".split(":")   # ['', 'a', '', 'b', '']
+  ":a::b:".split(/:/)   # ['a', 'b']
+  ```
+  * When the parts must line up and the delimiter needs escaping, substitute a placeholder, split on the substring, restore.
+* Interpolation works in double quotes only — `"$name"` and `"${EXPR}"`; a single-quoted string is literal.
+* `encode_base64` appends a newline to its output.
+* Parse with `Int(s, base)` or `s.decode(TYPE)`; `Int("0x10")` throws `InvalidArgument`.
+* `~` is outdated — use `=~`. They are different methods rather than two spellings of one, so the swap is not mechanical:
+  * Every capture index shifts by one: for a regex, `~` puts the whole match at `matches[0]` and the first group at `matches[1]`, while `=~` puts the first group at `matches[0]`. Code reading `m[1]` keeps compiling and starts reading the wrong group.
+  * Only `~` populates the `MatchSuccess` fields `whole`, `before`, `after` and `positions`; under `=~` they throw `FieldNotFound`, so the whole match is unreachable — wrap the whole pattern in a group to get it back. Named groups (`.named`) behave the same under both.
+  * `"abc" ~ "bc"` is a substring search and gives a `MatchSuccess`; `"abc" =~ "bc"` is equality and gives a `MatchFailure`. For a substring test use `"bc" in "abc"`.
+  * Against `Pfx`/`Sfx`, `~` fills `matches`, `before` and `after`; `=~` returns a `MatchSuccess` whose `matches` is empty.
+* Capture groups of a regex match (`m = s =~ /.../`) are in `m.matches`, which is truncated at the last participating group — `m[i]` for an optional group throws `IndexNotFound`. Use `m.get(i)`, which gives `null` or a given default. A group skipped in the middle is `null` rather than truncating, and `len(m)` is not defined, so length-probing is not a way out. With named groups the problem does not arise: `m.named` always holds every name.
+* `replace(s, RegExp, Str)` has no backreferences — `\1` stays literal. The `replace(s, RegExp, Fun)` form calls the function with the whole matched text only, not with the groups.
 
 ### AWS CLI
 
