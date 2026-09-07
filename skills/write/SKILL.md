@@ -276,6 +276,8 @@ result = ``MY_COMMAND MY_ARGS``
 ```
 
 * Single-backtick `` `…` `` capture does NOT strip the trailing newline (e.g. `` `realpath X` `` keeps the `\n`); apply `.trim()`. `.strip()`/`.chomp()`/`.rstrip()` do not exist — `.trim()` does.
+* Prefer the `cd:` option — `$(cd:dir make)`, `$(cd:"/tmp" make)` — over calling `chdir()` before the command: it scopes the directory change to the child and leaves the script's own cwd untouched. Combines with `log:`, which then prints the directory too.
+* For the available command options (`ok:`, `line:`, `log:`, `top_level::`, ...) and their value syntax, see *Syntax - Options* in the [language reference](https://ngs-lang.org/doc/latest/man/ngslang.1.html).
 
 # Docs
 
