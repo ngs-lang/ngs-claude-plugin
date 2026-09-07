@@ -71,9 +71,15 @@ There is no signature introspection on a MultiMethod. Use `ngs -pi NAME`, which 
 
 ## Pitfalls
 
+These are AI pitfalls as it tends not to read the docs.
+
 * Pipes are not passing objects. Currently pipes are only used to run external commands and function like pipes in bash.
 * Do NOT use `X`, `Y`, `Z` or `A`, `B`, `C` as regular variable names — `X`/`Y`/`Z` are reserved for partial application (e.g. `arr.map(X + 1)`), `A`/`B`/`C` are reserved for block parameters (e.g. `arr.filter({A > 0})`).
 * Do NOT use a stdlib global's name (`args`, `echo`, ...) as a top-level variable — assignment replaces the multimethod for stdlib itself. Symptom later: `DontKnowHowToCall` exception. Check `ngs -pi NAME` whether a global name is taken. Not applicable inside functions or namespaces.
+* An assignment makes the name local to the **whole** enclosing scope (`F` body or `ns { ... }`), including expressions before it, hiding any same-named global — method or value.
+  * `F main() { lines = read(f).lines() }` throws `UndefinedLocalVar` blamed on the `.lines()` call, not on the assignment.
+  * Check `ngs -pi NAME` before naming a local; `lines`, `keys`, `values`, `len`, `limit` collide most.
+  * `local NAME` changes nothing; `global NAME` silences it but replaces the global process-wide (later `DontKnowHowToCall`).
 * Integer literals silently strip leading zeros: `0123456` parses as `123456` (no octal interpretation, no error). For IDs that may have a leading zero (AWS account IDs, ZIP codes, phone numbers), use a string literal: `"0123456"`.
 * An unnamed parameter's pattern may only be a bare type (`F f(Int)`) or a literal (`F f('all')`). A matcher/expression pattern requires a named parameter: `F f(x:AnyOf(1,2))`, not `F f(AnyOf(1,2))` (syntax error).
 * **Current bug**: an identifier starting with `super` (e.g. `super_type`, `superx`) is mis-parsed as the `super` keyword plus the rest when referenced as an expression inside a `{ ... }` block or function body (bareword at top level is fine). Avoid naming variables/parameters with a `super` prefix.
@@ -113,6 +119,7 @@ Fix these where you see.
 
 ## Code Structure
 
+* Wrap a script's top-level code in `ns { ... }`, or put everything in `F main(...) { ... }`. Both keep assignments out of the global scope, where a name collision replaces a stdlib multimethod process-wide. A `main` defined inside an `ns` is still auto-invoked.
 * Variables and functions/methods defined in an enclosing scope are accessible to inner functions as closures — works in `ns { }`, `F`, and other blocks. Use for shared constants instead of duplicating literals.
 * Use `NAME = ns { ... }` to define namespaces. Prefix private/internal functions with `_` (e.g. `_chunks`) to keep them out of public namespace API.
   * NAME::FIELD = VALUE works for setting namespace fields from outside
