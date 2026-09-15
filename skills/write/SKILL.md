@@ -28,6 +28,16 @@ Do not guess APIs, use `ngs -pi METHOD_NAME` for quick lookup of parameters and 
 
 There is no signature introspection on a MultiMethod. Use `ngs -pi NAME`, which prints every `.Arr()[i]` with its parameter list. `-pi` uses `inspect()` internally.
 
+* `-pi` also shows definition location file/line
+
+Operators are methods, so `-pi` covers them too. A name that is not a plain identifier needs parentheses:
+
+* `(NAME)` — the operator characters `- | = ! @ ? ~ + * / % $ < > . [ ] :`, plus `$()`, `$[]`, `is not`, `not in`. Ex: `ngs -pi '(::)'`.
+* `('NAME')` — what the first form rejects.
+* `globals()['NAME']` — `\` and `"$*"`, which neither parenthesized form accepts.
+
+For the list of special-named methods see *Methods for operators* in the [language reference](https://ngs-lang.org/doc/latest/man/ngslang.1.html).
+
 
 ## Notation
 
@@ -68,6 +78,7 @@ There is no signature introspection on a MultiMethod. Use `ngs -pi NAME`, which 
   * A type `deep_copy()` doesn't cover throws `MethodNotFound`, also inside a container (`F f(a=[Int])`). Opt out with `F instantiate_param_dflt(x:MyType) x` (needs `global instantiate_param_dflt` inside an `F`/`ns`).
   * Inherit `DeepCopyable` to get default implementation of `deep_copy`, allowing a value the type to be used as default parameter value.
 * `upvar NAME` is a scope declaration (like `local`/`global`). Reading and assigning an enclosing-scope variable works without it; it is needed for `upvar NAME` followed by `F NAME(...) ...`, which adds the method to the enclosing multimethod instead of shadowing it with a new local one.
+* A bare word in `%[...]` may contain only `a-zA-Z0-9` and `- + / = , . _ @ :`. Quote others.
 
 ## Pitfalls
 
@@ -82,8 +93,11 @@ These are AI pitfalls as it tends not to read the docs.
   * `local NAME` changes nothing; `global NAME` silences it but replaces the global process-wide (later `DontKnowHowToCall`).
 * Integer literals silently strip leading zeros: `0123456` parses as `123456` (no octal interpretation, no error). For IDs that may have a leading zero (AWS account IDs, ZIP codes, phone numbers), use a string literal: `"0123456"`.
 * An unnamed parameter's pattern may only be a bare type (`F f(Int)`) or a literal (`F f('all')`). A matcher/expression pattern requires a named parameter: `F f(x:AnyOf(1,2))`, not `F f(AnyOf(1,2))` (syntax error).
+* Do NOT `return` inside `ns { ... }` — it returns from the namespace's own function, so the block's value is that value and not a `Namespace`.
+* `Syntax error in file X, line N, column C` reports the furthest position the parser reached, which is at or past the mistake.
 * **Current bug**: an identifier starting with `super` (e.g. `super_type`, `superx`) is mis-parsed as the `super` keyword plus the rest when referenced as an expression inside a `{ ... }` block or function body (bareword at top level is fine). Avoid naming variables/parameters with a `super` prefix.
 * **Current bug**: in command context (backtick, `$()`, `$[]`) an argument that *starts* with an interpolation ends there, and the rest becomes a NEW argument — `cmd ${x}post` passes two arguments (`VAL`, `post`), same for `${x}-post` and `${x}${x}`. Any literal before the interpolation avoids it: `cmd pre${x}post` → one argument `preVALpost`. Workaround: wrap in double quotes — `cmd "${x}post"`.
+* **Current bug**: the precedence table at `doc/ngslang.1.md:431` is not what the parser applies. Parenthesise every operand of `and`/`or`, and any chain of three or more different operators.
 
 ## Misconceptions
 
@@ -95,6 +109,7 @@ Fix these where you see.
 
 * Use `log()` and `warn()` for timestamped output to stderr.
 * Use `debug(FACILITY, MESSAGE)` or `debug(MESSAGE)` for debug output to stderr, controlled by `DEBUG=FACILITY1,FACILITY2,...` environment variable. Use `DEBUG=*` to enable all facilities.
+* **Current bug**: when the process gets a socket as fd 2 instead of a pipe or tty (process supervisors and agent tools do this), `isatty(2)` fails with `ENOTSUP` and everything that colors its output throws
 * Return an `Arr[Hash]` as the program's result to have it auto-rendered as a table — don't `echo` rows by hand. Only on a TTY and only when all elements have the same keys. Control it via `data.meta()[Table] = {'name': 'Title', 'columns': %[col1 col2 ...]}` (`'allow_extra_columns': true` keeps keys not listed in `columns`; `columns` must not be empty; `config("table_NAME")` overrides `columns`).
 
 ## Idiomatic NGS
@@ -112,6 +127,7 @@ Fix these where you see.
 * The one-arg `DATA.assert(ERROR_MESSAGE)` truthiness form calls `Bool(DATA)`, which is undefined for some types (e.g. `Type`) and throws `MethodNotFound`. For those, use the pattern form: `DATA.assert(Not(null), ERROR_MESSAGE)`.
 * Rely heavily on multiple dispatch, if possible use same name for methods (verbs) and keep number of verbs to minimum.
 * Prefer new types with existing verbs over new verbs over untyped (Hash for example) data
+* Prefer a `type` plus a method over a closure over value(s)
 * Types support multiple inheritance: `type Foo([Parent1, Parent2])`. Single parent shorthand: `type Foo(Parent)`.
 * Constants are uppercase. (but in this skill file, uppercase usually means placeholder)
 * In multi-line array (`[...]`) and hash (`{...}`) literals, separate elements with newlines only — no trailing commas.
@@ -125,8 +141,10 @@ Fix these where you see.
   * NAME::FIELD = VALUE works for setting namespace fields from outside
   * Underscore-prefixed names (`_Ctx`, `_helper`) are namespace-private and unreachable as `ns::_name` from outside. Values of underscore-named types still flow through normally; only the name lookup is private.
 * `TEST` blocks placed inside `ns { ... }` do NOT have access to the namespace's lexical scope — they execute at top level. Reference public members as `ns_name::PublicName` (autoload triggers on first reference). To exercise underscore-prefixed internals, route through a public entry point.
+  * Put the assertions in an `F test()` inside the namespace and drive them from one `TEST MyNs::test()` to test from it `F _ns_local_methods() ...`.
 * Do not comment if the code is obvious.
-* Small sections of code - `# BLAH` comment before. 
+* Small sections of code - `# BLAH` comment before.
+* `doc` lines are a docstring for the `F` or `type` on the very next line — those two are the only things `doc` attaches to.
 * Larger sections of code - use `section "BLAH" { ... }` for organizing the code. Also, instead of splitting into a function that is called only once.
   * `section` is a transparent grouping wrapper — it does not open a scope, so it has no effect on name resolution. A `global NAME` declared inside a `section` covers the whole enclosing `ns` (nested sections included); don't re-declare it per section.
 * If a function/method f1 is used only from within f2, it should be defined *inside* f2.
@@ -136,6 +154,9 @@ Fix these where you see.
 
 * `Hash([['a', 0], ['b', 1]])` / `Hash(arr_of_pairs)` constructs a Hash from an array of key-value pairs
 * Remove a key from a Hash with `.rejectk(key)` — there is no `-` operator for Hash-minus-key (`h - 'k'` throws `MethodNotFound`)
+* Filter a `Hash` by key or by value with `filterk` / `filterv` /`rejectk` / `rejectv`. All four are `(h:Eachable2, pattern:Any=...)`
+* `filter(h:Hash, predicate:Fun)` is called as `predicate(k, v)`.
+* `mapk` / `mapv` are `(h:Hash, mapper:Fun)` — `Fun` only
 * Access environment variables with `ENV.varname` or `ENV.get('varname', 'default')`
 * Prefer patterns over predicates: use `items.filter({'status': 'running'})` instead of `items.filter(X.status == 'running')`
   * `.reject(PATTERN)` is `.filter(Not(PATTERN))`
@@ -171,22 +192,38 @@ Fix these where you see.
   * `Box(Success)` is a `FullBox` of the wrapped value, `Box(Failure)` is an `EmptyBox`. These are the `Result` types — a regex `MatchFailure` is `Any`, so `Box("a" =~ /^(..)/)` is a `FullBox`.
   * `.get(dflt)` unwraps with a fallback; `.get()` on `EmptyBox` throws `BoxFail`.
   * Prefer `.get(key)` for a plain lookup; reach for `Box` when traversing deeper or guarding shapes.
+* `Holder(val)` is a mutable single-value container
+  * `get(Holder)`
+  * `get_and_update(Holder, cb)` calls `cb(old_value)`, which must return `[value_to_return, new_value_to_hold]`.
 * Use `.the_one(PATTERN)` over `.filter(PATTERN)[0]` to express expectation of exactly one element.
 * Use `.first(PATTERN)` over `.filter(PATTERN)[0]` for the first matching element; it stops at the match instead of scanning everything. `Eachable1` only — not `Hash`.
   * `PATTERN` defaults to truthiness: `[false, 0, null, "xyz"].first()` is `"xyz"`.
   * `.first(PATTERN, dflt)` returns `dflt` when nothing matches; without `dflt` it throws `ElementNotFound`.
   * A `dflt` that later code drills into (`.first({'code': Str}, {'code': null}).code`) is a sentinel — prefer `.filter(PATTERN).Box(0).map(...).get(null)`.
   * `.last(PATTERN)` / `.last(PATTERN, dflt)` mirrors `.first` from the end, but always scans the whole `Eachable1` — no short-circuit.
+* `e.group('field')` / `e.group(F(elt) ...)` returns a `Hash` of `Arr`
+* `e.uniq()` / `e.uniq('field')` / `e.uniq(cb)` keeps the first of each and preserves order
 * Prefer `VALUE.when(PATTERN, CB_OR_NEW_VALUE)` over `if COND then CB(VALUE) else VALUE` / `if COND then NEW_VALUE else VALUE`. (when `COND` does pattern matching between `VALUE` and `PATTERN` in the broad sense, including `VALUE == PATTERN` for scalars)
   * Example: `["ssh", "IP", "w"].map(X.when("IP", "10.0.0.1"))` gives `["ssh", "10.0.0.1", "w"]`.
   * Example: `v.when(Not(null), { ... })`
   * Example: `v.when({EXPR}, {transform(A)})` — block as predicate; ignores `v`, checks EXPR. Use when condition is not based on the value being transformed.
   * Works well in method chains.
 * Prefer NGS built-in data manipulation over `jq` or AWS CLI built-in `--query`
+* Read whole file with `read(PATH)` or `read(File(PATH))`
+* Read whole stdin with `read()`
 * Prefer `fetch(PATH)` over `read(PATH).decode_json()`
 * Prefer `store(PATH, DATA)` over `write(PATH, DATA.encode_json())`
   * `store(path, data, encode_hints)` accepts a third `encode_hints` Hash — same as `encode_json()`.
 * `encode_json()` pretty-print API uses a hints Hash (encode_json(data, {"pretty": true})), not keyword arguments
+* `lines(Str)` splits into lines
+* Nothing on the read side streams. Input bigger than memory needs hand-rolled chunking via `read(fd, count)`.
+* `f.lines(ARR)` writes lines into the file
+* There is no CSV support
+* Time
+  * Format time with `Time().Str(strftime_format, gmt:Bool=false)`. Do NOT call low level `strftime`/`gmtime`/`localtime`
+  * Parse with `Time(Str, optional_format)`
+  * `t.epoch` / `Int(t)` are epoch seconds
+  * `JsonData(Time)` is the epoch - used by `encode_json()`
 
 ### Patterns
 
@@ -196,6 +233,8 @@ Fix these where you see.
 ### String Manipulation
 
 * What exists: `split`, `join`, `replace`, `pos`, `starts_with`/`ends_with`, `trim`, `lines`, `words`, `limit`, `before_first`/`after_first`/`before_last`/`after_last`, `ord`/`chr`, `encode_base64`/`decode_base64`, `encode_hex`/`decode_hex`, `encode_uri_component`/`decode_uri_component`, `encode_html`/`encode_html_attr`. Absent: `reverse(Str)`, `index(Str, ...)` (use `pos`), `sprintf`/`%`-formatting, and trimming anything but whitespace — `trim` takes no character argument.
+* `"xa" - Pfx("x")` and `"a.json" - Sfx(".json")` both give `"a"`. Throws `InvalidArgument` if not present.
+  * `MaybePfx`/`MaybeSfx` return the string unchanged if not present.
 * No string case-conversion built-in under the obvious names (`upper`/`upcase`/`to_upper`/`capitalize` all absent) — don't derive a display string by upcasing; pass it explicitly.
 * `pos()` returns `null` if substring not found
 * `len(Str)` counts **bytes**, not codepoints.
@@ -209,7 +248,9 @@ Fix these where you see.
   ":a::b:".split(/:/)   # ['a', 'b']
   ```
   * When the parts must line up and the delimiter needs escaping, substitute a placeholder, split on the substring, restore.
-* Interpolation works in double quotes only — `"$name"` and `"${EXPR}"`; a single-quoted string is literal.
+* `split(s, delim, max_parts)` yields fewer than `max_parts` parts when the delimiter is absent. Read the optional part with `.get(N)` and check for `Null`
+* `'...'` and `"..."` process the same escapes — `\a \b \e \f \n \r \t \\ \' \" \$` and nothing else
+  * Interpolation is the only difference — `"$name"` and `"${EXPR}"` interpolate, a single-quoted string does not.
 * `encode_base64` appends a newline to its output.
 * Parse with `Int(s, base)` or `s.decode(TYPE)`; `Int("0x10")` throws `InvalidArgument`.
 * `~` is outdated — use `=~`. They are different methods rather than two spellings of one, so the swap is not mechanical:
@@ -239,11 +280,14 @@ Fix these where you see.
 * C-style `for(i=0; i<n; i+=step)` works in NGS — prefer over `i=0; while ... i+=step`. Use `for(i;n)` when step is 1. Prefer `each` to `for`.
 * Parallel iteration: `coll.peach(F(x) { ... })` runs the callback over each element concurrently and returns `coll`; use `coll.pmap(F(x) ...)` to get the results. Prefer these over `parallel(*coll.map(F(x) F() { ... }))`. `parallel(*funcs)` takes funcs as a splat (separate args, or spread an array with `*arr`) — passing one bare array fails with `InvalidArgument("parallel() expects functions")`.
 * Use `not(COND) returns VALUE` for early-exit guard clauses instead of `if not(COND) { return VALUE }` or `COND or return VALUE`
+* Use `COND throws EXCEPTION` for early exit with an exception instead of `if COND { throw EXCEPTION }`.
+* `guard COND` is not an assertion, a failed `guard` raises nothing — dispatch silently continues with the next matching method, as if this one did not match.
 * There is no ternary operator (`? :`). Use `if COND { A } else { B }` instead.
 * `if COND { A }` with no `else` is an expression that yields `null` when `COND` is false.
 * There is `match` syntax: `match VAL { PAT1 EXPR1 PAT2 EXPR2 ... }`. First time VAL matches PAT, EXPR is evaluated and becomes the result of `match`. `match`/`ematch` use `=~ PAT`.
 * `switch`/`eswitch` use `== VAL`
 * There is `cond` syntax: `cond { COND1 EXPR1 COND2 EXPR2 ...}`. First COND that evaluates to true, EXPR is evaluated and becomes the result of `cond`.
+* Use `tor` sparingly and only with a tiny left side. A wider left side silently swallows every exception.
 
 ### Retry
 
