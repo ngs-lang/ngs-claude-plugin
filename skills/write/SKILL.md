@@ -324,6 +324,7 @@ result = ``MY_COMMAND MY_ARGS``
 * Single-backtick `` `…` `` capture does NOT strip the trailing newline (e.g. `` `realpath X` `` keeps the `\n`); apply `.trim()`. `.strip()`/`.chomp()`/`.rstrip()` do not exist — `.trim()` does.
 * Prefer the `cd:` option — `$(cd:dir make)`, `$(cd:"/tmp" make)` — over calling `chdir()` before the command: it scopes the directory change to the child and leaves the script's own cwd untouched. Combines with `log:`, which then prints the directory too.
 * `line:` attaches to one command or to the **last** command of a pipeline — `` `printf a | line: base64` ``. On a non-final command it warns and has no effect; the pipeline-wide `line::` form is silently ignored.
+* `$[...]` is short for `$(top_level:: ...)` — stdout/stderr stay the script's, nothing is captured (`.stdout` is `null`). Absent from `doc/*.md`; look it up as `ngs -pi '($[])'`.
 * For the available command options (`ok:`, `line:`, `log:`, `top_level::`, ...) and their value syntax, see *Syntax - Options* in the [language reference](https://ngs-lang.org/doc/latest/man/ngslang.1.html).
 
 # Docs
