@@ -146,6 +146,7 @@ Fix these where you see.
 * Do not comment if the code is obvious.
 * Small sections of code - `# BLAH` comment before.
 * `doc` lines are a docstring for the `F` or `type` on the very next line — those two are the only things `doc` attaches to.
+  * A first word followed by ` - ` keys the entry (`doc Refuses - a relay is created once` → key `Refuses`, not the `''` key that plain lines get). Two words before the dash, or `:` instead of ` - `, stay plain.
 * Larger sections of code - use `section "BLAH" { ... }` for organizing the code. Also, instead of splitting into a function that is called only once.
   * `section` is a transparent grouping wrapper — it does not open a scope, so it has no effect on name resolution. A `global NAME` declared inside a `section` covers the whole enclosing `ns` (nested sections included); don't re-declare it per section.
 * If a function/method f1 is used only from within f2, it should be defined *inside* f2.
