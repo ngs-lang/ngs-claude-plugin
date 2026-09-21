@@ -97,6 +97,7 @@ These are AI pitfalls as it tends not to read the docs.
 * `Syntax error in file X, line N, column C` reports the furthest position the parser reached, which is at or past the mistake.
 * **Current bug**: an identifier starting with `super` (e.g. `super_type`, `superx`) is mis-parsed as the `super` keyword plus the rest when referenced as an expression inside a `{ ... }` block or function body (bareword at top level is fine). Avoid naming variables/parameters with a `super` prefix.
 * **Current bug**: in command context (backtick, `$()`, `$[]`) an argument that *starts* with an interpolation ends there, and the rest becomes a NEW argument — `cmd ${x}post` passes two arguments (`VAL`, `post`), same for `${x}-post` and `${x}${x}`. Any literal before the interpolation avoids it: `cmd pre${x}post` → one argument `preVALpost`. Workaround: wrap in double quotes — `cmd "${x}post"`.
+* In command syntax (the top level of every script, plus backtick, `$()`, `$[]`) an unquoted `?`, `*`, `[` or `{` is a syntax error, not a literal — globbing is unimplemented, the characters remain reserved. Double-quote the argument: `cmd "http://h/?code=x"`.
 * **Current bug**: the precedence table at `doc/ngslang.1.md:431` is not what the parser applies. Parenthesise every operand of `and`/`or`, and any chain of three or more different operators.
 
 ## Misconceptions
