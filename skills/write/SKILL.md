@@ -241,7 +241,7 @@ Fix these where you see.
 * `pos()` returns `null` if substring not found
 * `len(Str)` counts **bytes**, not codepoints.
 * `Str` is an `Eachable1` of its bytes, so `Arr(s)` gives the characters and `map`/`each`/`count(s, PATTERN)` work on them. `"abc".split("")` gives `[["a", "b", "c"]]` — it dispatches to `split(Eachable1, delim)`; use `Arr("abc")`.
-* `s[i]` indexes, `s[a..b]` slices half-open, `s[i..null]` runs to the end. `s[-1]` works as a single index, but a negative or out-of-range bound inside a range throws `IndexNotFound` — nothing is clamped.
+* `s[i]` indexes, `s[a..b]` slices half-open, `s[i..null]` runs to the end. `s[-1]` works as a single index.
 * `Str(x, target_width:Int, ch:Str=" ")` pads to a **byte** width — a `Str` pads on the right, an `Int` on the left, and a negative `target_width` reverses that. `limit(s, n, marker)` truncates instead.
 * `before_first`/`after_first`/`before_last`/`after_last` throw `InvalidArgument` when the delimiter is absent — guard with `in`.
 * `split(Str, Str)` and `split(Str, RegExp)` disagree about empty parts — the regexp form drops leading, trailing and between-adjacent-delimiter parts alike, so positional parsing needs the `Str` overload:
